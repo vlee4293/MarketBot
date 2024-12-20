@@ -12,9 +12,10 @@ class Database:
 
         self.async_session = async_sessionmaker(
             self.engine, 
-            expire_on_commit=False
+            expire_on_commit=False,
         )
     
+
     async def create_tables(self) -> None:
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
