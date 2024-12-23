@@ -44,8 +44,8 @@ class AccountManager:
         await session.commit()
 
 class PollManager:
-    async def create_poll(self, session: AsyncSession, title: str, start: datetime, duration: timedelta) -> Poll:
-        poll = create_object(Poll, title=title, start=start, end=start+duration)
+    async def create_poll(self, session: AsyncSession, message: discord.InteractionMessage, title: str, num_options: int, start: datetime, duration: timedelta) -> Poll:
+        poll = create_object(Poll, reference=message.jump_url, title=title, num_options=num_options, start=start, end=start+duration)
         session.add(poll)
         await session.commit()
         return poll
@@ -80,12 +80,18 @@ class PollManager:
             if poll.is_open:
                 poll.end = deadline
                 await session.commit()
+    
+    async def set_winning_option(self, session: AsyncSession, poll: Poll, option: int) -> None:
+        if not poll.is_finalized:
+            poll.is_finalized = True
+            poll.winning_option = option
+            await session.commit()
 
 class PollSubscriberManager:
     async def subscribe(self, session: AsyncSession, account: Account, poll: Poll, option: int, stake: float) -> Optional[PollSubscriber]:
         stmt = select(PollSubscriber).where(PollSubscriber.account_id == account.id, PollSubscriber.poll_id == poll.id)
         query = await session.execute(stmt)
-        subscriber = query.scalars().one()
+        subscriber = query.scalars().one_or_none()
 
         if account.balance < stake:
             return

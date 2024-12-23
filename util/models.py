@@ -30,11 +30,14 @@ class PollSubscriber(Base):
 class Poll(Base):
     __tablename__ = 'poll'
     id:Mapped[int] = mapped_column(primary_key=True)
+    reference:Mapped[str] = mapped_column(sa.String(100), unique=True)
     title:Mapped[str] = mapped_column(sa.String(250))
+    num_options:Mapped[int] = mapped_column(sa.Integer)
     start:Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
     end:Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
     is_open:Mapped[bool] = mapped_column(sa.Boolean, server_default=sa.text('True'))
     is_finalized:Mapped[bool] = mapped_column(sa.Boolean, server_default=sa.text('False'))
+    winning_option:Mapped[int] = mapped_column(sa.Integer, nullable=True)
     subscribers:Mapped[List['PollSubscriber']] = relationship('PollSubscriber', backref='poll', cascade='all, delete-orphan')
 
 def create_object[T](cls: type[T], **kwargs) -> T:
