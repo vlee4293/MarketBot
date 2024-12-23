@@ -1,6 +1,6 @@
 import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from datetime import datetime
+from datetime import datetime, time
 from typing import List
 
 class Base(DeclarativeBase):
@@ -22,6 +22,7 @@ class PollSubscriber(Base):
     id:Mapped[int] = mapped_column(primary_key=True)
     account_id:Mapped[int] = mapped_column(sa.ForeignKey('account.id'))
     poll_id:Mapped[int] = mapped_column(sa.ForeignKey('poll.id'))
+    option:Mapped[int] = mapped_column(sa.Integer)
     stake:Mapped[float] = mapped_column(sa.NUMERIC(19,2, asdecimal=False), sa.CheckConstraint('stake >= 0'), server_default=sa.text('0'))
 
     __table_args__ = (sa.UniqueConstraint('account_id', 'poll_id', name='poll_subscriber_ukey'),)
@@ -30,10 +31,10 @@ class Poll(Base):
     __tablename__ = 'poll'
     id:Mapped[int] = mapped_column(primary_key=True)
     title:Mapped[str] = mapped_column(sa.String(250))
-    created_on:Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.func.now())
-    ended_on:Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), sa.CheckConstraint('ended_on > created_on'))
-    open:Mapped[bool] = mapped_column(sa.Boolean, server_default=sa.text('True'))
-    pool:Mapped[float] = mapped_column(sa.NUMERIC(19,2, asdecimal=False), sa.CheckConstraint('pool >= 0'), server_default=sa.text('0'))
+    start:Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+    end:Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+    is_open:Mapped[bool] = mapped_column(sa.Boolean, server_default=sa.text('True'))
+    is_finalized:Mapped[bool] = mapped_column(sa.Boolean, server_default=sa.text('False'))
     subscribers:Mapped[List['PollSubscriber']] = relationship('PollSubscriber', backref='poll', cascade='all, delete-orphan')
 
 def create_object[T](cls: type[T], **kwargs) -> T:

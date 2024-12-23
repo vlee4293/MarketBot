@@ -1,31 +1,40 @@
 from util import Database
 import os
 from discord.ext import commands
+from discord import app_commands
 from dotenv import load_dotenv
+import discord
 
-load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
-DB_USER = os.getenv('DB_USER')
-DB_PASSWD = os.getenv('DB_PASSWD')
-DB_NAME = os.getenv('DB_NAME')
-DB_HOST = os.getenv('DB_HOST')
-DB_PORT = os.getenv('DB_PORT')
 
 
 class MarketBot(commands.Bot):
     def __init__(self, command_prefix: str, **kwargs):
         super().__init__(command_prefix=command_prefix, **kwargs)
-        
+        load_dotenv()
+
         self.db = Database(
-            user=DB_USER, 
-            passwd=DB_PASSWD, 
-            db_name=DB_NAME, 
-            host=DB_HOST, 
-            port=DB_PORT
+            user=os.getenv('DB_USER'), 
+            passwd=os.getenv('DB_PASSWD'), 
+            db_name=os.getenv('DB_NAME'), 
+            host=os.getenv('DB_HOST'), 
+            port=os.getenv('DB_PORT')
         )
+
+        self.is_synced = False
+        
     
+    
+
     async def on_ready(self):
         print(f'{self.user.name}')
-        for filename in os.listdir('./cogs'):
-            if filename.endswith('.py'):
-                await self.load_extension(f'cogs.{filename[:-3]}')
+        if not self.is_synced:
+            cmds = await self.tree.sync(guild=discord.Object(id=os.getenv('DEBUG_GUILD')))
+            print(cmds)
+            self.is_synced = True
+
+        
+        
+        
+
+
+        
