@@ -4,8 +4,9 @@ from discord.ext import commands
 from discord import app_commands
 from dotenv import load_dotenv
 import discord
-import datetime
+from datetime import datetime, timezone
 import asyncio
+from util.models import PollStatus
 
 
 
@@ -30,16 +31,21 @@ class MarketBot(commands.Bot):
 
     async def poll_status_checker(self):
         await self.wait_until_ready()
-        channel = self.get_channel(1316881823435063359)
         while not self.is_closed():
             async with self.db.async_session() as session:
-                polls = await self.db.polls.get_polls(session, True)
+                polls = await self.db.polls.get_all(session, status=PollStatus.OPEN)
                 for poll in polls:
-                    if poll.end.astimezone() <= datetime.datetime.now().astimezone():
-                        await self.db.polls.set_state(session, poll.id, False)
-                        _, channel_id, _ = list(map(int, poll.reference[29:].split('/')))
+                    if poll.lockin_by <= datetime.now(timezone.utc):
+                        await self.db.polls.update(session, poll, status=PollStatus.LOCKED)
+                        _, channel_id, message_id = list(map(int, poll.reference[29:].split('/')))
                         channel = self.get_channel(channel_id)
-                        await channel.send(embed=discord.Embed(title=f'Betting for `{poll.title}` has locked', description=poll.reference))
+                        await channel.send(embed=discord.Embed(title=f'Betting for `{poll.question}` has locked', description=poll.reference))
+                        msg = await channel.fetch_message(message_id)
+                        new_embed = msg.embeds[0]
+                        new_embed.title = '[LOCKED] ' + new_embed.title[7:] 
+                        new_embed.set_footer(text=f'Total Stake: {await self.db.bets.get_total_stake(session, poll=poll):.2f}')
+                        await msg.edit(embed=new_embed)
+
             await asyncio.sleep(60)
 
     async def on_ready(self):

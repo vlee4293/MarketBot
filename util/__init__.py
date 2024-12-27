@@ -1,5 +1,5 @@
 from .db import Database as BaseDB
-from .managers import AccountManager, PollManager, PollSubscriberManager
+from .managers import AccountManager, PollManager, BetManager, PollOptionManager
 
 
 __all__ = [
@@ -14,4 +14,6 @@ class Database(BaseDB):
     
         self.accounts = AccountManager()
         self.polls = PollManager()
-        self.subscribers = PollSubscriberManager()
+        self.bets = BetManager()
+        self.options = PollOptionManager()
+    
