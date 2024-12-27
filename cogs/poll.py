@@ -92,9 +92,21 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
 
             await self.client.db.options.update(session, poll.options[winning_number-1], winning=True)
             await self.client.db.polls.update(session, poll, status=PollStatus.FINALIZED, finalized_on=datetime.now())
+            winner_stakes = await self.client.db.bets.get_stake_totals(session, poll=poll, winners=True)
+            all_stakes = await self.client.db.bets.get_stake_totals(session, poll=poll)
+            payout_ratio = sum(all_stakes) / sum(winner_stakes)
+            betters = await self.client.db.bets.get_winning_bets(session, poll=poll)
 
-        embed = poll_embed_maker.close_poll(poll, poll.options[winning_number-1])
+            for better in betters:
+                await self.client.db.accounts.update(session, better.account, balance=better.account.balance+(better.stake*payout_ratio))
+
+        embed = poll_embed_maker.closed_poll(poll, poll.options[winning_number-1])
         await interaction.response.send_message(embed=embed)
+        _, channel_id, message_id = list(map(int, poll.reference[29:].split('/')))
+        channel = self.client.get_channel(channel_id)
+        msg = await channel.fetch_message(message_id)
+        embed = poll_embed_maker.edit_closed_poll(msg.embeds[0])
+        await msg.edit(embed=embed)
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         if isinstance(error, app_commands.CommandInvokeError):

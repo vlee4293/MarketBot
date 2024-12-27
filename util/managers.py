@@ -152,21 +152,6 @@ class PollManager:
         
         query = await session.execute(stmt)
         return query.unique().scalars().all()
-
-    async def delete(
-        self, 
-        session: AsyncSession, 
-        id: int
-    ) -> None:
-        
-        stmt = (
-            delete(Poll).where(
-                Poll.id == id
-            )
-        )
-        
-        await session.execute(stmt)
-        await session.commit()
     
     async def update(
         self,
@@ -230,57 +215,47 @@ class BetManager:
         query = await session.execute(stmt)
         return query.unique().scalars().one_or_none()
 
-    async def get_all(
-        self,
-        session: AsyncSession,
-        *,
-        account: Account,
-        option: PollOption,
-    ) -> List[Bet]:
-        
-        stmt = (
-            select(Bet).where(
-                Bet.account == account,
-                Bet.option == option,
-            )
-        )
-
-        query = await session.execute(stmt)
-        return query.unique().scalars().all()
-
-    async def get_total_stake(
+    async def get_stake_totals(
         self,
         session: AsyncSession,
         *,
         poll: Poll,
         winners: bool = None
-    ) -> float:
+    ) -> List[float]:
         
-        if winners is not None:
-            stmt = (
-                select(func.sum(Bet.stake)).join(Bet.option)
-                .where(
-                    PollOption.poll == poll,
-                    PollOption.winning == winners
-                )
-                .group_by(PollOption.poll == poll)
-            )
+        stmt = select(func.sum(Bet.stake)).join(Bet.option, isouter=True, full=True)
+        if winners is None:
+            stmt = stmt.where(PollOption.poll == poll)
         else:
-            stmt = (
-                select(func.sum(Bet.stake)).join(Bet.option)
-                .where(
-                    PollOption.poll == poll,
-                )
-                .group_by(PollOption.poll == poll)
+            stmt = stmt.where(
+                PollOption.poll == poll,
+                PollOption.winning == winners
             )
-
+        
+        stmt = stmt.group_by(Bet.option_id)
 
         query = await session.execute(stmt)
-        total = query.scalars().one_or_none()
-        if total is None:
-            return 0
-        else:
-            return total
+        stakes = query.scalars().all()
+        stakes = [stake if stake is not None else 0 for stake in stakes]
+        return stakes
+
+    async def get_winning_bets(
+        self,
+        session: AsyncSession,
+        *,
+        poll: Poll
+    ) -> List[Bet]:
+        
+        stmt = (
+            select(Bet).join(Bet.option)
+            .where(
+                PollOption.poll_id == poll.id,
+                PollOption.winning == True
+            )
+        )
+
+        query = await session.execute(stmt)
+        return query.unique().scalars().all()
 
     async def update(
         self,
@@ -299,7 +274,8 @@ class BetManager:
         if stake is not None:
             bet.stake = stake
         
-        await session.commit()
+        await session.commit()        
+
 
 class PollOptionManager:
     async def create(

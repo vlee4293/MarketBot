@@ -7,7 +7,7 @@ import discord
 from datetime import datetime, timezone
 import asyncio
 from util.models import PollStatus
-
+from util.embeds import poll_embed_maker
 
 
 class MarketBot(commands.Bot):
@@ -41,10 +41,10 @@ class MarketBot(commands.Bot):
                         channel = self.get_channel(channel_id)
                         await channel.send(embed=discord.Embed(title=f'Betting for `{poll.question}` has locked', description=poll.reference))
                         msg = await channel.fetch_message(message_id)
-                        new_embed = msg.embeds[0]
-                        new_embed.title = '[LOCKED] ' + new_embed.title[7:] 
-                        new_embed.set_footer(text=f'Total Stake: {await self.db.bets.get_total_stake(session, poll=poll):.2f}')
-                        await msg.edit(embed=new_embed)
+                        original = msg.embeds[0]
+                        stakes = await self.db.bets.get_stake_totals(session, poll=poll)
+                        embed = poll_embed_maker.locked_poll(original, poll, stakes)
+                        await msg.edit(embed=embed)
 
             await asyncio.sleep(60)
 
