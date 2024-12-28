@@ -12,6 +12,7 @@ class poll_embed_maker:
     @classmethod
     def new_poll(cls, poll: Poll, options: List[PollOption]) -> discord.Embed:
         embed = discord.Embed(title=f'[OPEN] {poll.question}')
+        embed.description = f'Poll created by: {poll.account.name}'
         prefixed_options = [f':number_{option.index}: `{option.value}`' for option in sorted(options, key=lambda option: option.index)]
         embed.add_field(name='Options', value='\n'.join(prefixed_options))
         embed.add_field(name='Place your stake with:', value=f'`/poll bet {poll.id} [option_number] [stake]`', inline=False)
@@ -22,7 +23,7 @@ class poll_embed_maker:
     def locked_poll(cls, original: discord.Embed, poll: Poll, stakes: List[float]) -> discord.Embed:
         total_stake = sum(stakes)
         if total_stake == 0:
-            normal_stakes = [0 for _ in stakes]
+            normal_stakes = [0.0 for _ in stakes]
         else:
             normal_stakes = [stake / total_stake for stake in stakes]
         votes = [len(option.bets) for option in poll.options]

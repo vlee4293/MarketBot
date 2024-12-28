@@ -38,8 +38,15 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
     
         async with self.client.db.async_session() as session:
             start_time = datetime.now()
+            account = await self.client.db.accounts.get_or_create(
+                session, 
+                account_number = interaction.user.id, 
+                name = interaction.user.name
+            )
+
             poll = await self.client.db.polls.create(
                 session, 
+                account = account,
                 question = question,
                 reference = message.jump_url,
                 created_on = start_time,
@@ -57,6 +64,18 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
 
     @app_commands.command(name='bet')
     async def bet(self, interaction: discord.Interaction, poll_id: int, option_number: int, stake: float):
+        """Bet on a poll
+        
+        Parameters
+        -----------
+        poll_id: int
+            Provide the ID of the poll.
+        option_number: int
+            Provide one of the options in the poll.
+        stake: float
+            The amount of money to bet.
+        """
+
         async with self.client.db.async_session() as session:
             poll = await self.client.db.polls.get(session, poll_id)  
             if poll is None:
@@ -94,10 +113,29 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
             if winning_number <= 0 or winning_number > len(poll.options):
                 raise Exception(f'Are you blind? There are clearly only {len(poll.options)} options loser.')
 
+            account = await self.client.db.accounts.get_or_create(
+                session, 
+                account_number = interaction.user.id, 
+                name = interaction.user.name
+            )
+
+            if poll.account != account:
+                raise Exception('You do not own this poll.')
+
+            _, channel_id, message_id = list(map(int, poll.reference[29:].split('/')))
+            channel = self.client.get_channel(channel_id)
+            msg = await channel.fetch_message(message_id)
+            embed = msg.embeds[0]
+            
+            if poll.status is PollStatus.OPEN:
+                await self.client.db.polls.update(session, poll, status=PollStatus.LOCKED, lockin_by=datetime.now())
+                stakes = await self.client.db.bets.get_stake_totals(session, poll=poll)
+                embed = poll_embed_maker.locked_poll(embed, poll, stakes)
+
             await self.client.db.options.update(session, poll.options[winning_number-1], winning=True)
             await self.client.db.polls.update(session, poll, status=PollStatus.FINALIZED, finalized_on=datetime.now())
             winner_stakes = await self.client.db.bets.get_stake_totals(session, poll=poll, winners=True)
-            if len(winner_stakes) > 0:
+            if sum(winner_stakes) > 0:
                 all_stakes = await self.client.db.bets.get_stake_totals(session, poll=poll)
                 payout_ratio = sum(all_stakes) / sum(winner_stakes)
                 betters = await self.client.db.bets.get_winning_bets(session, poll=poll)
@@ -105,12 +143,9 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
                 for better in betters:
                     await self.client.db.accounts.update(session, better.account, balance=better.account.balance+(better.stake*payout_ratio))
 
-        embed = poll_embed_maker.closed_poll(poll, poll.options[winning_number-1])
-        await interaction.response.send_message(embed=embed)
-        _, channel_id, message_id = list(map(int, poll.reference[29:].split('/')))
-        channel = self.client.get_channel(channel_id)
-        msg = await channel.fetch_message(message_id)
-        embed = poll_embed_maker.edit_closed_poll(msg.embeds[0])
+        closed_embed = poll_embed_maker.closed_poll(poll, poll.options[winning_number-1])
+        await interaction.response.send_message(embed=closed_embed)
+        embed = poll_embed_maker.edit_closed_poll(embed)
         await msg.edit(embed=embed)
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):

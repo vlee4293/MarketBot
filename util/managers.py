@@ -13,7 +13,7 @@ class AccountManager:
         *,
         account_number: int,
         name: str,
-        balance: float = None
+        balance: Optional[float] = None
     ) -> Account:
         
         account = Account(
@@ -31,12 +31,11 @@ class AccountManager:
         session: AsyncSession, 
         *,
         account_number: int, 
-        name: str
     ) -> Optional[Account]:
         
         stmt = (
             select(Account).where(
-                or_(Account.account_number == account_number, Account.name == name)
+                Account.account_number == account_number
             )
         )
 
@@ -49,11 +48,13 @@ class AccountManager:
         *,
         account_number: int,
         name: str,
-        balance: float = None
+        balance: Optional[float] = None
     ) -> Account:
         
-        account = await self.get(session, account_number=account_number, name=name)
+        account = await self.get(session, account_number=account_number)
         if account:
+            if account.name != name:
+                self.update(session, account, name=name)
             return account
         else:
             return await self.create(
@@ -68,13 +69,11 @@ class AccountManager:
         session: AsyncSession, 
         *,
         account_number: int, 
-        name: str
     ) -> None:
         
         stmt = (
             delete(Account).where(
                 Account.account_number == account_number,
-                Account.name == name
             )
         )
 
@@ -100,19 +99,22 @@ class AccountManager:
 
         await session.commit()
 
+
 class PollManager:
     async def create(
         self, 
         session: AsyncSession, 
         *,
+        account: Account,
         question: str, 
         reference: str,
         created_on: datetime, 
         lockin_by: datetime,
-        finalized_on: datetime = None
+        finalized_on: Optional[datetime] = None
     ) -> Poll:
         
         poll = Poll(
+            account=account,
             question=question,
             created_on=created_on,
             lockin_by=lockin_by,
@@ -158,13 +160,16 @@ class PollManager:
         session: AsyncSession,
         poll: Poll,
         *,
-        status: PollStatus = None,
-        question: str = None,
-        lockin_by: datetime = None,
-        finalized_on: datetime = None,
-        reference: str = None
+        account: Optional[Account] = None,
+        status: Optional[PollStatus] = None,
+        question: Optional[str] = None,
+        lockin_by: Optional[datetime] = None,
+        finalized_on: Optional[datetime] = None,
+        reference: Optional[str] = None
     ) -> None:
         
+        if account is not None:
+            poll.account = account
         if status is not None:
             poll.status = status
         if question is not None:
@@ -220,7 +225,7 @@ class BetManager:
         session: AsyncSession,
         *,
         poll: Poll,
-        winners: bool = None
+        winners: Optional[bool] = None
     ) -> List[float]:
         
         stmt = select(func.sum(Bet.stake)).join(Bet.option, isouter=True, full=True)
@@ -262,10 +267,10 @@ class BetManager:
         session: AsyncSession,
         bet: Bet,
         *,
-        account: Account = None,
-        option: PollOption = None,
-        stake: float = None
-    ) -> Bet:
+        account: Optional[Account] = None,
+        option: Optional[PollOption] = None,
+        stake: Optional[float] = None
+    ):
         
         if account is not None:
             bet.account = account
@@ -366,10 +371,10 @@ class PollOptionManager:
         session: AsyncSession,
         option: PollOption,
         *,
-        poll: Poll = None,
-        index: int = None,
-        value: str = None,
-        winning: bool = None,
+        poll: Optional[Poll] = None,
+        index: Optional[int] = None,
+        value: Optional[str] = None,
+        winning: Optional[bool] = None,
     ) -> None:
         
         if poll is not None:

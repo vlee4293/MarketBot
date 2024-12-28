@@ -23,17 +23,17 @@ class PollStatus(enum.Enum):
 class Account(Base):
     __tablename__ = 'account'
     __table_args__ = (
-        sa.UniqueConstraint('account_number', 'name', name='account_ukey'),
         sa.CheckConstraint('balance >= 0'),
     )
 
     id:Mapped[int] = mapped_column(primary_key=True)
-    account_number:Mapped[int] = mapped_column(sa.BIGINT)
-    name:Mapped[str] = mapped_column(sa.String(32))
+    account_number:Mapped[int] = mapped_column(sa.BIGINT, unique=True)
+    name:Mapped[str] = mapped_column(sa.String(32), unique=True)
     created_on:Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.func.now())
     balance:Mapped[float] = mapped_column(sa.NUMERIC(19,2, asdecimal=False), server_default=sa.text('100'))
     
-    bets:Mapped[List['Bet']] = relationship(back_populates='account', cascade='all, delete-orphan', lazy='joined', innerjoin=True)
+    bets:Mapped[List['Bet']] = relationship(back_populates='account', cascade='all, delete-orphan', lazy='joined')
+    polls:Mapped['Poll'] = relationship(back_populates='account', cascade='all, delete-orphan', lazy='joined')
 
 class Bet(Base):
     __tablename__ = 'bet'
@@ -50,15 +50,17 @@ class Bet(Base):
     
     account:Mapped['Account'] = relationship(back_populates='bets', cascade='all', lazy='joined', innerjoin=True)
     option:Mapped['PollOption'] = relationship(back_populates='bets', cascade='all', lazy='joined', innerjoin=True)
+    
 
 class Poll(Base):
     __tablename__ = 'poll'
     __table_args__ = (
         sa.CheckConstraint('lockin_by > created_on'),
-        sa.CheckConstraint('finalized_on > lockin_by'),
+        sa.CheckConstraint('finalized_on > created_on'),
     )
 
     id:Mapped[int] = mapped_column(primary_key=True)
+    account_id:Mapped[int] = mapped_column(sa.ForeignKey('account.id'))
     status:Mapped[PollStatus] = mapped_column(default=PollStatus.OPEN)
     question:Mapped[str] = mapped_column(sa.String(250))
     created_on:Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
@@ -67,6 +69,7 @@ class Poll(Base):
     reference:Mapped[str] = mapped_column(sa.String(100), unique=True)
     
     options:Mapped[List['PollOption']] = relationship(back_populates='poll', cascade='all, delete-orphan', lazy='joined', innerjoin=True)
+    account:Mapped['Account'] = relationship(back_populates='polls', cascade='all', lazy='joined', innerjoin=True)
 
 class PollOption(Base):
     __tablename__ = 'poll_option'
