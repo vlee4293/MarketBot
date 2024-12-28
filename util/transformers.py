@@ -10,7 +10,7 @@ class Duration(NamedTuple):
 
     @classmethod
     async def transform(cls, interaction: discord.Interaction, value: str):
-        m = re.match(r'^\d+[mhd]', value)
+        m = re.match(r'^\d+[mhd]$', value)
         if len(value) > 10:
             raise Exception('Too big number.')
         if m:

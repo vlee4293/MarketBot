@@ -21,7 +21,7 @@ class Market(commands.Cog):
     @app_commands.command(name='balance')
     async def balance(self, interaction: discord.Interaction):
         async with self.client.db.async_session() as session:
-            account = await self.client.db.accounts.get_or_create(session, interaction.user)
+            account = await self.client.db.accounts.get_or_create(session, account_number=interaction.user.id, name=interaction.user.name)
             embed = Embed(
                 title=f'{interaction.user.display_name}\'s Balance', 
                 description=f'${account.balance:.2f}'
