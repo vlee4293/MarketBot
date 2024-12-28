@@ -21,7 +21,10 @@ class poll_embed_maker:
     @classmethod
     def locked_poll(cls, original: discord.Embed, poll: Poll, stakes: List[float]) -> discord.Embed:
         total_stake = sum(stakes)
-        normal_stakes = [stake / total_stake for stake in stakes]
+        if total_stake == 0:
+            normal_stakes = [0 for _ in stakes]
+        else:
+            normal_stakes = [stake / total_stake for stake in stakes]
         votes = [len(option.bets) for option in poll.options]
         original.title = '[LOCKED] ' + original.title[7:]
         original.remove_field(1)

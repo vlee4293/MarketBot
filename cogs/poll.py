@@ -2,6 +2,7 @@ import os
 import discord
 from discord import app_commands
 from discord.ext import commands
+from sqlalchemy.exc import DBAPIError
 from datetime import datetime
 from bot import MarketBot
 from util.embeds import poll_embed_maker
@@ -63,9 +64,12 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
             if poll.status is not PollStatus.OPEN:
                 raise Exception('There is no open poll to bet on stupid')
 
-            if option_number <= 0 and option_number > len(poll.options):
+            if option_number <= 0 or option_number > len(poll.options):
                 raise Exception(f'Are you blind? There are clearly only {len(poll.options)} options loser.')
             
+            if stake <= 0:
+                raise Exception(f'We are not paying you.')
+
             account = await self.client.db.accounts.get_or_create(session, account_number=interaction.user.id, name=interaction.user.name)
             if account.balance < stake:
                 raise Exception('You got no money to bet on you broke ass bitch!')
@@ -93,12 +97,13 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
             await self.client.db.options.update(session, poll.options[winning_number-1], winning=True)
             await self.client.db.polls.update(session, poll, status=PollStatus.FINALIZED, finalized_on=datetime.now())
             winner_stakes = await self.client.db.bets.get_stake_totals(session, poll=poll, winners=True)
-            all_stakes = await self.client.db.bets.get_stake_totals(session, poll=poll)
-            payout_ratio = sum(all_stakes) / sum(winner_stakes)
-            betters = await self.client.db.bets.get_winning_bets(session, poll=poll)
+            if len(winner_stakes) > 0:
+                all_stakes = await self.client.db.bets.get_stake_totals(session, poll=poll)
+                payout_ratio = sum(all_stakes) / sum(winner_stakes)
+                betters = await self.client.db.bets.get_winning_bets(session, poll=poll)
 
-            for better in betters:
-                await self.client.db.accounts.update(session, better.account, balance=better.account.balance+(better.stake*payout_ratio))
+                for better in betters:
+                    await self.client.db.accounts.update(session, better.account, balance=better.account.balance+(better.stake*payout_ratio))
 
         embed = poll_embed_maker.closed_poll(poll, poll.options[winning_number-1])
         await interaction.response.send_message(embed=embed)
@@ -109,10 +114,12 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
         await msg.edit(embed=embed)
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
-        if isinstance(error, app_commands.CommandInvokeError):
-            await interaction.response.send_message(error.original, delete_after=30, ephemeral=True)
-        else:
-            await interaction.response.send_message('An error occurred.', delete_after=30, ephemeral=True)
+        if not isinstance(error.__cause__, DBAPIError):
+            if isinstance(error, app_commands.CommandInvokeError) or isinstance(error, app_commands.TransformerError):
+                await interaction.response.send_message(error.__cause__)
+                return
+        
+        await interaction.response.send_message('An error occurred.')
 
 async def setup(client: MarketBot):
     await client.add_cog(PollCog(client), guild=discord.Object(id=os.getenv('DEBUG_GUILD')))

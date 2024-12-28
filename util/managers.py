@@ -232,7 +232,7 @@ class BetManager:
                 PollOption.winning == winners
             )
         
-        stmt = stmt.group_by(Bet.option_id)
+        stmt = stmt.group_by(PollOption.id)
 
         query = await session.execute(stmt)
         stakes = query.scalars().all()
