@@ -13,7 +13,7 @@ from util.embeds import poll_embed_maker
 class MarketBot(commands.Bot):
     def __init__(self, command_prefix: str, **kwargs):
         super().__init__(command_prefix=command_prefix, **kwargs)
-        load_dotenv()
+        load_dotenv(override=True)
 
         self.db = Database(
             user=os.getenv('DB_USER'), 
@@ -51,8 +51,6 @@ class MarketBot(commands.Bot):
     async def on_ready(self):
         print(f'{self.user.name}')
         if not self.is_synced:
-            cmds = await self.tree.sync(guild=discord.Object(id=os.getenv('DEBUG_GUILD')))
-            print(cmds)
             self.is_synced = True
 
         

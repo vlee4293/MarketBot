@@ -157,6 +157,10 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
         await interaction.response.send_message('An error occurred.')
 
 async def setup(client: MarketBot):
-    await client.add_cog(PollCog(client), guild=discord.Object(id=os.getenv('DEBUG_GUILD')))
+    guild_id = os.getenv('DEBUG_GUILD')
+    if guild_id:
+        await client.add_cog(PollCog(client), guild=discord.Object(id=guild_id))
+    else:
+        await client.add_cog(PollCog(client))
     
     

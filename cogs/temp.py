@@ -34,6 +34,20 @@ class Market(commands.Cog):
         await self.client.db.drop_tables()
         await self.client.db.create_tables()
         await interaction.response.send_message('Tables reset', ephemeral=True)
+    
+    @app_commands.guild_only()
+    @app_commands.command(name='sync')
+    async def sync(self, interaction: discord.Interaction):
+        if interaction.user.id == 246534330657144832:
+            print(self.client.tree.get_commands())
+            await self.client.tree.sync()
+            await interaction.response.send_message('Synced Successfully')
+        else:
+            await interaction.response.send_message('You must be the owner to use this command!')
 
 async def setup(client: MarketBot):
-    await client.add_cog(Market(client), guild=discord.Object(id=os.getenv('DEBUG_GUILD')))
+    guild_id = os.getenv('DEBUG_GUILD')
+    if guild_id:
+        await client.add_cog(Market(client), guild=discord.Object(id=guild_id))
+    else:
+        await client.add_cog(Market(client))

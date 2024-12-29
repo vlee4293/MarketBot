@@ -54,4 +54,8 @@ class ExperimentCog(commands.Cog):
         await interaction.response.send_message(error, delete_after=30, ephemeral=True)
 
 async def setup(client: MarketBot):
-    await client.add_cog(ExperimentCog(client), guild=discord.Object(id=os.getenv('DEBUG_GUILD')))
+    guild_id = os.getenv('DEBUG_GUILD')
+    if guild_id:
+        await client.add_cog(ExperimentCog(client), guild=discord.Object(id=guild_id))
+    else:
+        await client.add_cog(ExperimentCog(client))

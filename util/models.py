@@ -33,7 +33,7 @@ class Account(Base):
     balance:Mapped[float] = mapped_column(sa.NUMERIC(19,2, asdecimal=False), server_default=sa.text('100'))
     
     bets:Mapped[List['Bet']] = relationship(back_populates='account', cascade='all, delete-orphan', lazy='joined')
-    polls:Mapped['Poll'] = relationship(back_populates='account', cascade='all, delete-orphan', lazy='joined')
+    polls:Mapped[List['Poll']] = relationship(back_populates='account', cascade='all, delete-orphan', lazy='joined')
 
 class Bet(Base):
     __tablename__ = 'bet'
