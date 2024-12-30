@@ -5,7 +5,7 @@ from discord.ext import commands
 from bot import MarketBot
 
 
-class AdminCog(discord.Cog):
+class AdminCog(commands.Cog):
     def __init__(self, client: MarketBot):
         self.client = client
     

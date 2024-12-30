@@ -19,6 +19,7 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
     async def on_ready(self):
         print(f'{__name__} is online!')
     
+    @app_commands.checks.cooldown(1, 5, key=lambda x: (x.guild_id, x.user.id))
     @app_commands.command(name='create')
     async def create(self, interaction: discord.Interaction, question: str, lockin_duration: Duration, options: Options):  
         """Create a poll
@@ -66,6 +67,7 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
         await interaction.followup.send(embed=embed)
 
     @app_commands.command(name='bet')
+    @app_commands.checks.cooldown(1, 5, key=lambda x: (x.guild_id, x.user.id))
     async def bet(self, interaction: discord.Interaction, poll_id: int, option_number: int, stake: float):
         """Bet on a poll
         
@@ -135,6 +137,7 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
         await interaction.response.send_message(f'${stake:.2f} placed on `{poll.question}`', ephemeral=True)
                 
     @app_commands.command(name='close')
+    @app_commands.checks.cooldown(1, 5, key=lambda x: (x.guild_id, x.user.id))
     async def close(self, interaction: discord.Interaction, poll_id: int, winning_number: int):
         """Close a poll you created.
         
@@ -237,6 +240,9 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         if not isinstance(error.__cause__, DBAPIError):
+            if isinstance(error, app_commands.CommandOnCooldown):
+                await interaction.response.send_message('Command on cooldown. Wait atleast 5 seconds.', ephemeral=True, delete_after=300)
+                return
             if isinstance(error, app_commands.CommandInvokeError) or isinstance(error, app_commands.TransformerError):
                 await interaction.response.send_message(error.__cause__, ephemeral=True, delete_after=300)
                 return
