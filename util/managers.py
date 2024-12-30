@@ -11,12 +11,14 @@ class AccountManager:
         self, 
         session: AsyncSession, 
         *,
+        guild_id: int,
         account_number: int,
         name: str,
         balance: Optional[float] = None
     ) -> Account:
         
         account = Account(
+            guild_id=guild_id,
             account_number=account_number, 
             name=name, 
             balance=balance
@@ -30,11 +32,13 @@ class AccountManager:
         self, 
         session: AsyncSession, 
         *,
+        guild_id: int,
         account_number: int, 
     ) -> Optional[Account]:
         
         stmt = (
             select(Account).where(
+                Account.guild_id == guild_id,
                 Account.account_number == account_number
             )
         )
@@ -46,12 +50,13 @@ class AccountManager:
         self, 
         session: AsyncSession, 
         *,
+        guild_id: int,
         account_number: int,
         name: str,
         balance: Optional[float] = None
     ) -> Account:
         
-        account = await self.get(session, account_number=account_number)
+        account = await self.get(session, guild_id=guild_id, account_number=account_number)
         if account:
             if account.name != name:
                 self.update(session, account, name=name)
@@ -59,6 +64,7 @@ class AccountManager:
         else:
             return await self.create(
                 session, 
+                guild_id=guild_id,
                 account_number=account_number, 
                 name=name,
                 balance=balance
@@ -68,11 +74,13 @@ class AccountManager:
         self, 
         session: AsyncSession, 
         *,
+        guild_id: int,
         account_number: int, 
     ) -> None:
         
         stmt = (
             delete(Account).where(
+                Account.guild_id == guild_id,
                 Account.account_number == account_number,
             )
         )
@@ -85,11 +93,14 @@ class AccountManager:
         session: AsyncSession,
         account: Account,
         *,
-        account_number: int = None,
-        name: str = None,
-        balance: float = None
+        guild_id: Optional[int] = None,
+        account_number: Optional[int] = None,
+        name: Optional[str] = None,
+        balance: Optional[float] = None
     ) -> None:
         
+        if guild_id is not None:
+            account.guild_id = guild_id
         if account_number is not None:
             account.account_number = account_number
         if name is not None:
@@ -129,11 +140,14 @@ class PollManager:
     async def get(
         self, 
         session: AsyncSession, 
+        guild_id: int,
         id: int
     ) -> Optional[Poll]:
         
         stmt = (
-            select(Poll).where(
+            select(Poll).join(Poll.account)
+            .where(
+                Account.guild_id == guild_id,
                 Poll.id == id
             )
         )
@@ -148,8 +162,10 @@ class PollManager:
         status: PollStatus
     ) -> List[Poll]:
         
-        stmt = select(Poll).where(
-            Poll.status == status
+        stmt = (
+            select(Poll).where(
+                Poll.status == status
+            )
         )
         
         query = await session.execute(stmt)

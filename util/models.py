@@ -24,11 +24,13 @@ class Account(Base):
     __tablename__ = 'account'
     __table_args__ = (
         sa.CheckConstraint('balance >= 0'),
+        sa.UniqueConstraint('guild_id', 'account_number', 'name', name='account_ukey')
     )
 
     id:Mapped[int] = mapped_column(primary_key=True)
-    account_number:Mapped[int] = mapped_column(sa.BIGINT, unique=True)
-    name:Mapped[str] = mapped_column(sa.String(32), unique=True)
+    guild_id:Mapped[int] = mapped_column(sa.BIGINT)
+    account_number:Mapped[int] = mapped_column(sa.BIGINT)
+    name:Mapped[str] = mapped_column(sa.String(32))
     created_on:Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.func.now())
     balance:Mapped[float] = mapped_column(sa.NUMERIC(19,2, asdecimal=False), server_default=sa.text('100'))
     
