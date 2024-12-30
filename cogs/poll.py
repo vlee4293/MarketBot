@@ -66,8 +66,8 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
         embed = poll_embed_maker.new_poll(poll, poll_options)
         await interaction.followup.send(embed=embed)
 
-    @app_commands.command(name='bet')
     @app_commands.checks.cooldown(1, 5, key=lambda x: (x.guild_id, x.user.id))
+    @app_commands.command(name='bet')
     async def bet(self, interaction: discord.Interaction, poll_id: int, option_number: int, stake: float):
         """Bet on a poll
         
@@ -136,7 +136,20 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
                     stake = stake
                 )
             
-        await interaction.response.send_message(f'${stake:.2f} placed on `{poll.question}`', ephemeral=True)
+            stakes = await self.client.db.bets.get_stake_totals(session, poll=poll)
+        
+        await interaction.response.send_message(
+            f'${stake:.2f} placed on :number_{poll.options[option_number-1].index}:
+            `{poll.options[option_number-1].value}` for `{poll.question}`', ephemeral=True
+        )
+
+        _, channel_id, message_id = list(map(int, poll.reference[29:].split('/')))
+        channel = self.client.get_channel(channel_id)
+        msg = await channel.fetch_message(message_id)
+        embed = poll_embed_maker.update_open_poll(msg.embeds[0], poll, stakes)
+
+        await msg.edit(embed=embed)
+
                 
     @app_commands.command(name='close')
     @app_commands.checks.cooldown(1, 5, key=lambda x: (x.guild_id, x.user.id))
@@ -194,7 +207,7 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
                     poll=poll
                 )
 
-                embed = poll_embed_maker.locked_poll(embed, poll, stakes)
+                embed = poll_embed_maker.lock_open_poll(embed, poll, stakes)
 
             await self.client.db.options.update(
                 session, 
@@ -237,7 +250,7 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
 
         closed_embed = poll_embed_maker.closed_poll(poll, poll.options[winning_number-1])
         await interaction.response.send_message(embed=closed_embed)
-        embed = poll_embed_maker.edit_closed_poll(embed)
+        embed = poll_embed_maker.close_locked_poll(embed)
         await msg.edit(embed=embed)
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):

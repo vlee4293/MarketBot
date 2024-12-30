@@ -42,7 +42,7 @@ class MarketBot(commands.Bot):
                         msg = await channel.fetch_message(message_id)
                         original = msg.embeds[0]
                         stakes = await self.db.bets.get_stake_totals(session, poll=poll)
-                        embed = poll_embed_maker.locked_poll(original, poll, stakes)
+                        embed = poll_embed_maker.lock_open_poll(original, poll, stakes)
                         await msg.edit(embed=embed)
 
             await asyncio.sleep(60)

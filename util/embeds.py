@@ -15,25 +15,35 @@ class poll_embed_maker:
         embed.description = f'Poll created by: {poll.account.name}'
         prefixed_options = [f':number_{option.index}: `{option.value}`' for option in sorted(options, key=lambda option: option.index)]
         embed.add_field(name='Options', value='\n'.join(prefixed_options))
+        embed.add_field(name='Stake Share (%)', value='\n'.join(list(map(percentBar, [0 for _ in options]))))
         embed.add_field(name='Place your stake with:', value=f'`/poll bet {poll.id} [option_number] [stake]`', inline=False)
-        embed.set_footer(text='Lock in by: '+ datetime.strftime(poll.lockin_by.astimezone(), '%-m/%-d/%y %-I:%M %p'))
+        footer = [
+            f'Total stake: ${0:.2f}',
+            'Lock in by: '+ datetime.strftime(poll.lockin_by.astimezone(), '%-m/%-d/%y %-I:%M %p'),
+        ]
+        embed.set_footer(text='\n'.join(footer))
         return embed
     
     @classmethod
-    def locked_poll(cls, original: discord.Embed, poll: Poll, stakes: List[float]) -> discord.Embed:
+    def update_open_poll(cls, original: discord.Embed, poll: Poll, stakes: List[float]):
         total_stake = sum(stakes)
-        if total_stake == 0:
-            normal_stakes = [0.0 for _ in stakes]
-        else:
-            normal_stakes = [stake / total_stake for stake in stakes]
-        votes = [len(option.bets) for option in poll.options]
-        original.title = '[LOCKED] ' + original.title[7:]
-        original.remove_field(1)
-        original.add_field(name='Stake Share (%)', value='\n'.join(list(map(percentBar, normal_stakes))))
-        original.add_field(name='Close the poll with:', value=f'`/poll close {poll.id} [winning_number]`', inline=False)
+        normal_stakes = [stake / total_stake for stake in stakes]
+        original.set_field_at(1, name='Stake Share (%)', value='\n'.join(list(map(percentBar, normal_stakes))))
         footer = [
             f'Total stake: ${total_stake:.2f}',
-            f'Total votes: {sum(votes)}',
+            'Lock in by: '+ datetime.strftime(poll.lockin_by.astimezone(), '%-m/%-d/%y %-I:%M %p'),
+        ]
+        original.set_footer(text='\n'.join(footer))
+        return original
+
+
+    @classmethod
+    def lock_open_poll(cls, original: discord.Embed, poll: Poll, stakes: List[float]) -> discord.Embed:
+        original.title = '[LOCKED] ' + original.title[7:]
+        original.set_field_at(2, name='Close the poll with:', value=f'`/poll close {poll.id} [winning_number]`', inline=False)
+        total_stake, _ = original.footer.text.split('\n')
+        footer = [
+            total_stake,
         ]
         original.set_footer(text='\n'.join(footer))
         return original
@@ -45,7 +55,7 @@ class poll_embed_maker:
         return embed
     
     @classmethod
-    def edit_closed_poll(cls, original: discord.Embed) -> discord.Embed:
+    def close_locked_poll(cls, original: discord.Embed) -> discord.Embed:
         original.title = '[CLOSED] ' + original.title[9:]
         original.remove_field(2)
         return original
