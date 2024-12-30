@@ -1,11 +1,10 @@
-from util import Database
-import os
-from discord.ext import commands
-from discord import app_commands
-from dotenv import load_dotenv
-import discord
-from datetime import datetime, timezone
 import asyncio
+import discord
+import os
+from datetime import datetime, timezone
+from dotenv import load_dotenv
+from discord.ext import commands
+from util import Database
 from util.models import PollStatus
 from util.embeds import poll_embed_maker
 
@@ -50,6 +49,7 @@ class MarketBot(commands.Bot):
 
     async def on_ready(self):
         print(f'{self.user.name}')
+        print([command.qualified_name for command in self.tree.get_commands()])
         if not self.is_synced:
             self.is_synced = True
 

@@ -1,7 +1,7 @@
 
+import discord
 from datetime import datetime
 from typing import List
-import discord
 from util.models import Poll, PollOption
 
 def percentBar(stake):

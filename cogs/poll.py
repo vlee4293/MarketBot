@@ -1,9 +1,9 @@
 import os
 import discord
+from datetime import datetime
 from discord import app_commands
 from discord.ext import commands
 from sqlalchemy.exc import DBAPIError
-from datetime import datetime
 from bot import MarketBot
 from util.embeds import poll_embed_maker
 from util.models import PollStatus
@@ -89,6 +89,8 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
                 poll_id
             )  
             
+            stake = round(stake, 2)
+
             if poll is None:
                 raise Exception('There is no poll to bet on stupid')
             if poll.status is not PollStatus.OPEN:

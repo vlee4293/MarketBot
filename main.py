@@ -1,8 +1,8 @@
-from bot import MarketBot
-import discord
-import os
-from discord.ext import commands
 import asyncio
+import os
+import discord
+from discord.ext import commands
+from bot import MarketBot
 
 async def load(bot: commands.Bot):
     for filename in os.listdir('./cogs'):

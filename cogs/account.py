@@ -1,11 +1,9 @@
+import os
 import discord
+from discord import app_commands
 from discord.ext import commands
 from discord.embeds import Embed
 from bot import MarketBot
-from datetime import datetime, timedelta
-from discord import app_commands
-from typing import Literal
-import os
 
 
 class AccountCog(commands.Cog):
@@ -20,6 +18,7 @@ class AccountCog(commands.Cog):
     @app_commands.guild_only()
     @app_commands.command(name='balance')
     async def balance(self, interaction: discord.Interaction):
+        """View your balance."""
         async with self.client.db.async_session() as session:
             
             account = await self.client.db.accounts.get_or_create(
