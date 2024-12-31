@@ -38,11 +38,12 @@ class MarketBot(commands.Bot):
                         await self.db.polls.update(session, poll, status=PollStatus.LOCKED)
                         _, channel_id, message_id = list(map(int, poll.reference[29:].split('/')))
                         channel = self.get_channel(channel_id)
-                        await channel.send(embed=discord.Embed(title=f'Betting for `{poll.question}` has locked', description=poll.reference))
+                        await channel.send(embed=discord.Embed(title=f'Betting for [`{poll.question:.45}`]({poll.reference}) has locked', description=f'@{poll.account.name}'))
                         msg = await channel.fetch_message(message_id)
                         original = msg.embeds[0]
                         stakes = await self.db.bets.get_stake_totals(session, poll=poll)
-                        embed = poll_embed_maker.lock_open_poll(original, poll, stakes)
+                        embed = poll_embed_maker.update_open_poll(original, poll, stakes)
+                        embed = poll_embed_maker.lock_open_poll(original, poll)
                         await msg.edit(embed=embed)
 
             await asyncio.sleep(60)

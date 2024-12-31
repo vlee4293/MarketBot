@@ -32,6 +32,18 @@ class AccountCog(commands.Cog):
                 title=f'{interaction.user.display_name}\'s Balance', 
                 description=f'${account.balance:.2f}'
             )
+
+            raw_bets = await self.client.db.bets.get_all_active_by_account(session, account)
+            if len(raw_bets) > 0:
+                parsed_bets = {
+                    'Pending Poll': tuple(f'[`{bet.option.poll.question:.20}`]({bet.option.poll.reference})' for bet in raw_bets),
+                    'Option': tuple(f':number_{bet.option.index}: `{bet.option.value:.10}`' for bet in raw_bets),
+                    'Stake': tuple(f'`${bet.stake:.2f}`' for bet in raw_bets),
+                }
+                    
+                for name, values in parsed_bets.items():
+                    embed.add_field(name=name, value='\n'.join(values))
+
             
             await interaction.response.send_message(embed=embed)
             

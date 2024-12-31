@@ -32,7 +32,7 @@ class Account(Base):
     account_number:Mapped[int] = mapped_column(sa.BIGINT)
     name:Mapped[str] = mapped_column(sa.String(32))
     created_on:Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.func.now())
-    balance:Mapped[float] = mapped_column(sa.NUMERIC(19,2, asdecimal=False), server_default=sa.text('100'))
+    balance:Mapped[float] = mapped_column(sa.NUMERIC(19,2, asdecimal=False), server_default=sa.text('1000'))
     
     bets:Mapped[List['Bet']] = relationship(back_populates='account', cascade='all, delete-orphan', lazy='joined')
     polls:Mapped[List['Poll']] = relationship(back_populates='account', cascade='all, delete-orphan', lazy='joined')

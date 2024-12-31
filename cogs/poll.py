@@ -139,8 +139,8 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
             stakes = await self.client.db.bets.get_stake_totals(session, poll=poll)
         
         await interaction.response.send_message(
-            f'${stake:.2f} placed on :number_{poll.options[option_number-1].index}:
-            `{poll.options[option_number-1].value}` for `{poll.question}`', ephemeral=True
+            f'${stake:.2f} placed on :number_{poll.options[option_number-1].index}:`{poll.options[option_number-1].value}` for [`{poll.question:.45}`]({poll.reference})', 
+            ephemeral=True
         )
 
         _, channel_id, message_id = list(map(int, poll.reference[29:].split('/')))
@@ -207,7 +207,7 @@ class PollCog(commands.GroupCog, group_name='poll', group_description='Poll comm
                     poll=poll
                 )
 
-                embed = poll_embed_maker.lock_open_poll(embed, poll, stakes)
+                embed = poll_embed_maker.lock_open_poll(embed, poll)
 
             await self.client.db.options.update(
                 session, 

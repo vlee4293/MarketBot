@@ -236,6 +236,28 @@ class BetManager:
         query = await session.execute(stmt)
         return query.unique().scalars().one_or_none()
 
+    async def get_all_active_by_account(
+        self,
+        session: AsyncSession,
+        account: Account
+    ) -> List[Bet]:
+        
+        stmt = (
+            select(Bet).join(Bet.option)
+            .join(Bet.account)
+            .join(PollOption.poll)
+            .where(
+                Bet.account == account,
+                Poll.status != PollStatus.FINALIZED
+            )
+            .order_by(Poll.created_on.asc())
+        )
+
+        query = await session.execute(stmt)
+        bets = query.unique().scalars().all()
+
+        return bets
+
     async def get_stake_totals(
         self,
         session: AsyncSession,
