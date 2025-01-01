@@ -1,93 +1,82 @@
 from datetime import datetime
 from typing import Optional, List
-from sqlalchemy import select, delete, or_, func
+from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from util.models import *
 
 
-
 class AccountManager:
     async def create(
-        self, 
-        session: AsyncSession, 
+        self,
+        session: AsyncSession,
         *,
         guild_id: int,
         account_number: int,
         name: str,
-        balance: Optional[float] = None
+        balance: Optional[float] = None,
     ) -> Account:
-        
         account = Account(
-            guild_id=guild_id,
-            account_number=account_number, 
-            name=name, 
-            balance=balance
+            guild_id=guild_id, account_number=account_number, name=name, balance=balance
         )
-        
+
         session.add(account)
         await session.commit()
         return account
 
     async def get(
-        self, 
-        session: AsyncSession, 
+        self,
+        session: AsyncSession,
         *,
         guild_id: int,
-        account_number: int, 
+        account_number: int,
     ) -> Optional[Account]:
-        
-        stmt = (
-            select(Account).where(
-                Account.guild_id == guild_id,
-                Account.account_number == account_number
-            )
+        stmt = select(Account).where(
+            Account.guild_id == guild_id, Account.account_number == account_number
         )
 
         query = await session.execute(stmt)
         return query.unique().scalars().one_or_none()
-    
+
     async def get_or_create(
-        self, 
-        session: AsyncSession, 
+        self,
+        session: AsyncSession,
         *,
         guild_id: int,
         account_number: int,
         name: str,
-        balance: Optional[float] = None
+        balance: Optional[float] = None,
     ) -> Account:
-        
-        account = await self.get(session, guild_id=guild_id, account_number=account_number)
+        account = await self.get(
+            session, guild_id=guild_id, account_number=account_number
+        )
         if account:
             if account.name != name:
                 self.update(session, account, name=name)
             return account
         else:
             return await self.create(
-                session, 
+                session,
                 guild_id=guild_id,
-                account_number=account_number, 
+                account_number=account_number,
                 name=name,
-                balance=balance
+                balance=balance,
             )
 
     async def delete(
-        self, 
-        session: AsyncSession, 
+        self,
+        session: AsyncSession,
         *,
         guild_id: int,
-        account_number: int, 
+        account_number: int,
     ) -> None:
-        
-        stmt = (
-            delete(Account).where(
-                Account.guild_id == guild_id,
-                Account.account_number == account_number,
-            )
+        stmt = delete(Account).where(
+            Account.guild_id == guild_id,
+            Account.account_number == account_number,
         )
 
         await session.execute(stmt)
         await session.commit()
-    
+
     async def update(
         self,
         session: AsyncSession,
@@ -96,9 +85,8 @@ class AccountManager:
         guild_id: Optional[int] = None,
         account_number: Optional[int] = None,
         name: Optional[str] = None,
-        balance: Optional[float] = None
+        balance: Optional[float] = None,
     ) -> None:
-        
         if guild_id is not None:
             account.guild_id = guild_id
         if account_number is not None:
@@ -113,24 +101,23 @@ class AccountManager:
 
 class PollManager:
     async def create(
-        self, 
-        session: AsyncSession, 
+        self,
+        session: AsyncSession,
         *,
         account: Account,
-        question: str, 
+        question: str,
         reference: str,
-        created_on: datetime, 
+        created_on: datetime,
         lockin_by: datetime,
-        finalized_on: Optional[datetime] = None
+        finalized_on: Optional[datetime] = None,
     ) -> Poll:
-        
         poll = Poll(
             account=account,
             question=question,
             created_on=created_on,
             lockin_by=lockin_by,
             finalized_on=finalized_on,
-            reference=reference
+            reference=reference,
         )
 
         session.add(poll)
@@ -138,39 +125,23 @@ class PollManager:
         return poll
 
     async def get(
-        self, 
-        session: AsyncSession, 
-        guild_id: int,
-        id: int
+        self, session: AsyncSession, guild_id: int, id: int
     ) -> Optional[Poll]:
-        
         stmt = (
-            select(Poll).join(Poll.account)
-            .where(
-                Account.guild_id == guild_id,
-                Poll.id == id
-            )
+            select(Poll)
+            .join(Poll.account)
+            .where(Account.guild_id == guild_id, Poll.id == id)
         )
 
         query = await session.execute(stmt)
         return query.unique().scalars().one_or_none()
-    
-    async def get_all(
-        self, 
-        session: AsyncSession, 
-        *,
-        status: PollStatus
-    ) -> List[Poll]:
-        
-        stmt = (
-            select(Poll).where(
-                Poll.status == status
-            )
-        )
-        
+
+    async def get_all(self, session: AsyncSession, *, status: PollStatus) -> List[Poll]:
+        stmt = select(Poll).where(Poll.status == status)
+
         query = await session.execute(stmt)
         return query.unique().scalars().all()
-    
+
     async def update(
         self,
         session: AsyncSession,
@@ -181,9 +152,8 @@ class PollManager:
         question: Optional[str] = None,
         lockin_by: Optional[datetime] = None,
         finalized_on: Optional[datetime] = None,
-        reference: Optional[str] = None
+        reference: Optional[str] = None,
     ) -> None:
-        
         if account is not None:
             poll.account = account
         if status is not None:
@@ -196,9 +166,10 @@ class PollManager:
             poll.finalized_on = finalized_on
         if reference is not None:
             poll.reference = reference
-        
+
         await session.commit()
-    
+
+
 class BetManager:
     async def create(
         self,
@@ -206,50 +177,31 @@ class BetManager:
         *,
         account: Account,
         option: PollOption,
-        stake: float
+        stake: float,
     ) -> Bet:
-        
-        bet = Bet(
-            account = account,
-            option = option,
-            stake = stake
-        )
+        bet = Bet(account=account, option=option, stake=stake)
 
         session.add(bet)
         await session.commit()
         return bet
-    
+
     async def get(
-        self,
-        session: AsyncSession,
-        account: Account,
-        option: PollOption
+        self, session: AsyncSession, account: Account, option: PollOption
     ) -> Optional[Bet]:
-        
-        stmt = (
-            select(Bet).where(
-                Bet.account == account,
-                Bet.option == option
-            )
-        )
+        stmt = select(Bet).where(Bet.account == account, Bet.option == option)
 
         query = await session.execute(stmt)
         return query.unique().scalars().one_or_none()
 
     async def get_all_active_by_account(
-        self,
-        session: AsyncSession,
-        account: Account
+        self, session: AsyncSession, account: Account
     ) -> List[Bet]:
-        
         stmt = (
-            select(Bet).join(Bet.option)
+            select(Bet)
+            .join(Bet.option)
             .join(Bet.account)
             .join(PollOption.poll)
-            .where(
-                Bet.account == account,
-                Poll.status != PollStatus.FINALIZED
-            )
+            .where(Bet.account == account, Poll.status != PollStatus.FINALIZED)
             .order_by(Poll.created_on.asc())
         )
 
@@ -259,22 +211,14 @@ class BetManager:
         return bets
 
     async def get_stake_totals(
-        self,
-        session: AsyncSession,
-        *,
-        poll: Poll,
-        winners: Optional[bool] = None
+        self, session: AsyncSession, *, poll: Poll, winners: Optional[bool] = None
     ) -> List[float]:
-        
         stmt = select(func.sum(Bet.stake)).join(Bet.option, isouter=True, full=True)
         if winners is None:
             stmt = stmt.where(PollOption.poll == poll)
         else:
-            stmt = stmt.where(
-                PollOption.poll == poll,
-                PollOption.winning == winners
-            )
-        
+            stmt = stmt.where(PollOption.poll == poll, PollOption.winning == winners)
+
         stmt = stmt.group_by(PollOption.id)
 
         query = await session.execute(stmt)
@@ -282,19 +226,11 @@ class BetManager:
         stakes = [stake if stake is not None else 0 for stake in stakes]
         return stakes
 
-    async def get_winning_bets(
-        self,
-        session: AsyncSession,
-        *,
-        poll: Poll
-    ) -> List[Bet]:
-        
+    async def get_winning_bets(self, session: AsyncSession, *, poll: Poll) -> List[Bet]:
         stmt = (
-            select(Bet).join(Bet.option)
-            .where(
-                PollOption.poll_id == poll.id,
-                PollOption.winning == True
-            )
+            select(Bet)
+            .join(Bet.option)
+            .where(PollOption.poll_id == poll.id, PollOption.winning is True)
         )
 
         query = await session.execute(stmt)
@@ -307,17 +243,16 @@ class BetManager:
         *,
         account: Optional[Account] = None,
         option: Optional[PollOption] = None,
-        stake: Optional[float] = None
+        stake: Optional[float] = None,
     ):
-        
         if account is not None:
             bet.account = account
         if option is not None:
             bet.option = option
         if stake is not None:
             bet.stake = stake
-        
-        await session.commit()        
+
+        await session.commit()
 
 
 class PollOptionManager:
@@ -329,17 +264,16 @@ class PollOptionManager:
         index: int,
         value: str,
     ) -> PollOption:
-        
         option = PollOption(
-            poll = poll,
-            index = index,
-            value = value,
+            poll=poll,
+            index=index,
+            value=value,
         )
 
         session.add(option)
         await session.commit()
         return option
-    
+
     async def create_all(
         self,
         session: AsyncSession,
@@ -347,25 +281,20 @@ class PollOptionManager:
         poll: Poll,
         options: List[str],
     ) -> List[PollOption]:
-        
-        poll_options = [PollOption(poll=poll, index=index+1, value=option) for index, option in enumerate(options)]
+        poll_options = [
+            PollOption(poll=poll, index=index + 1, value=option)
+            for index, option in enumerate(options)
+        ]
 
         session.add_all(poll_options)
         await session.commit()
         return poll_options
-    
+
     async def get(
-        self,
-        session: AsyncSession,
-        poll: Poll,
-        index: int
+        self, session: AsyncSession, poll: Poll, index: int
     ) -> Optional[PollOption]:
-        
-        stmt = (
-            select(PollOption).where(
-                PollOption.poll == poll,
-                PollOption.index == index
-            )
+        stmt = select(PollOption).where(
+            PollOption.poll == poll, PollOption.index == index
         )
 
         query = await session.execute(stmt)
@@ -376,9 +305,9 @@ class PollOptionManager:
         session: AsyncSession,
         poll: Poll,
     ) -> List[PollOption]:
-        
         stmt = (
-            select(PollOption).where(
+            select(PollOption)
+            .where(
                 PollOption.poll == poll,
             )
             .order_by(PollOption.index.asc())
@@ -387,18 +316,9 @@ class PollOptionManager:
         query = await session.execute(stmt)
         return query.unique().scalars().all()
 
-    async def delete(
-        self,
-        session: AsyncSession,
-        poll: Poll,
-        index: int
-    ) -> None:
-    
-        stmt = (
-            delete(PollOption).where(
-                PollOption.poll == poll,
-                PollOption.index == index
-            )
+    async def delete(self, session: AsyncSession, poll: Poll, index: int) -> None:
+        stmt = delete(PollOption).where(
+            PollOption.poll == poll, PollOption.index == index
         )
 
         await session.execute(stmt)
@@ -414,7 +334,6 @@ class PollOptionManager:
         value: Optional[str] = None,
         winning: Optional[bool] = None,
     ) -> None:
-        
         if poll is not None:
             option.poll = poll
         if index is not None:
@@ -423,6 +342,5 @@ class PollOptionManager:
             option.value = value
         if winning is not None:
             option.winning = winning
-        
+
         await session.commit()
-           
