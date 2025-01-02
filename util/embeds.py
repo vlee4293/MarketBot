@@ -36,7 +36,8 @@ class poll_embed_maker:
             inline=False,
         )
         footer = [
-            f"Prize Pool: ${prize:.2f}",
+            f"Minimum buy in: ${prize*0.25:.2f}",
+            f"Prize pool: ${prize:.2f}",
             "Lock in by: "
             + datetime.strftime(poll.lockin_by.astimezone(), "%-m/%-d/%y %-I:%M %p"),
         ]
@@ -61,7 +62,8 @@ class poll_embed_maker:
                 value="\n".join([f"`${stake:.2f}`" for stake in stakes]),
             )
             footer = [
-                f"Prize Pool: ${prize:.2f} + ${total_stake:.2f} (${prize + total_stake:.2f})",
+                f"Minimum buy in: ${prize*0.25:.2f}",
+                f"Prize pool: ${prize:.2f} + ${total_stake:.2f} (${prize + total_stake:.2f})",
                 "Lock in by: "
                 + datetime.strftime(
                     poll.lockin_by.astimezone(), "%-m/%-d/%y %-I:%M %p"

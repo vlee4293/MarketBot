@@ -107,7 +107,7 @@ class PollCog(commands.GroupCog, group_name="poll", group_description="Poll comm
                 raise Exception(
                     f"Are you blind? There are clearly only {len(poll.options)} options loser."
                 )
-            if stake <= 0:
+            if stake <= BASE_PRIZE * 0.25:
                 raise Exception("We are not paying you.")
 
             account = await self.client.db.accounts.get_or_create(
@@ -124,9 +124,9 @@ class PollCog(commands.GroupCog, group_name="poll", group_description="Poll comm
                 session, account, balance=account.balance - stake
             )
 
-            bet = await self.client.db.bets.get(
-                session, account, poll.options[option_number - 1]
-            )
+            option = sorted(poll.options, key=lambda x: x.index)[option_number - 1]
+
+            bet = await self.client.db.bets.get(session, account, option)
 
             if bet:
                 await self.client.db.bets.update(session, bet, stake=bet.stake + stake)
@@ -134,14 +134,14 @@ class PollCog(commands.GroupCog, group_name="poll", group_description="Poll comm
                 await self.client.db.bets.create(
                     session,
                     account=account,
-                    option=poll.options[option_number - 1],
+                    option=option,
                     stake=stake,
                 )
 
             stakes = await self.client.db.bets.get_stake_totals(session, poll=poll)
 
         await interaction.response.send_message(
-            f"${stake:.2f} placed on :number_{poll.options[option_number-1].index}:`{poll.options[option_number-1].value}` for [`{poll.question:.45}`]({poll.reference})",
+            f"${stake:.2f} placed on :number_{option.index}:`{option.value}` for [`{poll.question:.45}`]({poll.reference})",
             ephemeral=True,
         )
 
@@ -234,7 +234,7 @@ class PollCog(commands.GroupCog, group_name="poll", group_description="Poll comm
                     )
 
         closed_embed = poll_embed_maker.closed_poll(
-            poll, poll.options[winning_number - 1]
+            poll, sorted(poll.options, key=lambda x: x.index)[winning_number - 1]
         )
         await interaction.response.send_message(embed=closed_embed)
         embed = poll_embed_maker.close_locked_poll(embed)
