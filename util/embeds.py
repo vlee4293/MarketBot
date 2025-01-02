@@ -72,7 +72,7 @@ class poll_embed_maker:
 
     @classmethod
     def lock_open_poll(cls, original: discord.Embed, poll: Poll) -> discord.Embed:
-        original.title = "[LOCKED] " + original.title[7:]
+        original.title = original.title.replace("[OPEN]", "[LOCKED]")
         original.set_field_at(
             3,
             name="Close the poll with:",
@@ -98,6 +98,6 @@ class poll_embed_maker:
 
     @classmethod
     def close_locked_poll(cls, original: discord.Embed) -> discord.Embed:
-        original.title = "[CLOSED] " + original.title[9:]
+        original.title = original.title.replace("[LOCKED]", "[CLOSED]")
         original.remove_field(3)
         return original

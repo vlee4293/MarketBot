@@ -52,7 +52,7 @@ class MarketBot(commands.Bot):
                         original = msg.embeds[0]
                         stakes = await self.db.bets.get_stake_totals(session, poll=poll)
                         embed = poll_embed_maker.update_open_poll(
-                            original, poll, stakes
+                            100, original, poll, stakes
                         )
                         embed = poll_embed_maker.lock_open_poll(original, poll)
                         await msg.edit(embed=embed)

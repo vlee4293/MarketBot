@@ -15,6 +15,6 @@ repos:
           args:
           - '--fix'
           - '--ignore'
-          - 'F405,F403'
+          - 'F405,F403,E712'
       # Run the formatter.
       -   id: ruff-format

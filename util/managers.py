@@ -230,7 +230,7 @@ class BetManager:
         stmt = (
             select(Bet)
             .join(Bet.option)
-            .where(PollOption.poll_id == poll.id, PollOption.winning is True)
+            .where(PollOption.poll_id == poll.id, PollOption.winning == True)
         )
 
         query = await session.execute(stmt)
